@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анонимная Стена</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        .container { width: 100%; max-width: 600px; }
+        .post-form { background: #2a2a2a; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        textarea { width: 100%; height: 100px; background: #333; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px; resize: none; box-sizing: border-box; }
+        input[type="file"] { margin-top: 10px; color: #aaa; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-top: 10px; font-weight: bold; width: 100%; }
+        button:hover { background: #0056b3; }
+        .feed { display: flex; flex-direction: column; gap: 20px; }
+        .post { background: #2a2a2a; padding: 15px; border-radius: 12px; border-left: 5px solid #007bff; }
+        .post img { max-width: 100%; border-radius: 8px; margin-top: 10px; display: block; }
+        .post-time { font-size: 0.8rem; color: #777; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>👤 Анонимная Стена</h1>
+    
+    <div class="post-form">
+        <textarea id="postInput" placeholder="Что у тебя на уме? (Анонимно)"></textarea>
+        <input type="file" id="imageInput" accept="image/*">
+        <button onclick="addPost()">Опубликовать</button>
+    </div>
+
+    <div class="feed" id="postFeed">
+        </div>
+</div>
+
+<script>
+    function addPost() {
+        const text = document.getElementById('postInput').value;
+        const imageFile = document.getElementById('imageInput').files[0];
+        const feed = document.getElementById('postFeed');
+
+        if (text.trim() === "" && !imageFile) {
+            alert("Напиши что-нибудь!");
+            return;
+        }
+
+        const postDiv = document.createElement('div');
+        postDiv.className = 'post';
+        
+        const time = new Date().toLocaleString();
+        let imageHtml = "";
+
+        if (imageFile) {
+            const imageUrl = URL.createObjectURL(imageFile);
+            imageHtml = `<img src="${imageUrl}">`;
+        }
+
+        postDiv.innerHTML = `
+            <div class="post-time">${time} • Аноним</div>
+            <div class="post-text">${text}</div>
+            ${imageHtml}
+        `;
+
+        feed.prepend(postDiv);
+
+        // Очистка полей
+        document.getElementById('postInput').value = "";
+        document.getElementById('imageInput').value = "";
+    }
+</script>
+
+</body>
+</html>
