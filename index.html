@@ -8,22 +8,22 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #121212; color: #ffffff; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         .container { width: 100%; max-width: 500px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { color: #3d5afe; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { color: #3d5afe; margin-bottom: 5px; }
         
-        .post-form { background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 30px; }
-        textarea { width: 100%; height: 100px; background: #2b2b2b; border: 1px solid #444; color: white; padding: 12px; border-radius: 10px; resize: none; box-sizing: border-box; font-size: 16px; }
-        button { background: #3d5afe; color: white; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; margin-top: 10px; font-weight: bold; width: 100%; font-size: 16px; transition: 0.3s; }
+        .post-form { background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 25px; }
+        textarea { width: 100%; height: 100px; background: #2b2b2b; border: 1px solid #444; color: white; padding: 12px; border-radius: 10px; resize: none; box-sizing: border-box; font-size: 16px; outline: none; }
+        button { background: #3d5afe; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; margin-top: 10px; font-weight: bold; width: 100%; font-size: 16px; transition: 0.3s; }
         button:hover { background: #2a3eb1; }
         
-        .feed { display: flex; flex-direction: column; gap: 15px; }
+        .feed { display: flex; flex-direction: column; gap: 15px; width: 100%; }
         .post { background: #1e1e1e; padding: 15px; border-radius: 12px; border-left: 5px solid #3d5afe; position: relative; }
         .post-time { font-size: 0.75rem; color: #777; margin-bottom: 8px; }
-        .post-text { line-height: 1.5; word-wrap: break-word; }
+        .post-text { line-height: 1.5; word-wrap: break-word; font-size: 1.1rem; }
         
-        #status { font-size: 0.9rem; text-align: center; margin-bottom: 10px; color: #3d5afe; }
+        #status { font-size: 0.9rem; text-align: center; margin-bottom: 10px; color: #3d5afe; min-height: 20px; }
     </style>
 </head>
 <body>
@@ -31,12 +31,12 @@
 <div class="container">
     <div class="header">
         <h1>🏫 Чат 56 школы</h1>
-        <p>Анонимные сообщения</p>
+        <p>Анонимная стена объявлений</p>
     </div>
 
     <div class="post-form">
-        <textarea id="postInput" placeholder="Что ты хочешь сказать анонимно?"></textarea>
-        <button id="submitBtn">Отправить сообщение</button>
+        <textarea id="postInput" placeholder="Напиши что-нибудь анонимно..."></textarea>
+        <button id="submitBtn">Опубликовать</button>
     </div>
 
     <div id="status">Загрузка сообщений...</div>
@@ -44,41 +44,42 @@
 </div>
 
 <script>
-    // --- НАСТРОЙКИ (ВСТАВЬ СВОИ ДАННЫЕ ТУТ) ---
-    const DB_URL = 'https://twwlnqvwjkqcxegeoote.supabase.co
-
-'; 
+    // ТВОИ ДАННЫЕ УЖЕ ВСТАВЛЕНЫ
+    const DB_URL = 'https://twwlnqvwjkqcxegeoote.supabase.co'; 
     const DB_KEY = 'sb_publishable_AcN89vQAY3mzDf9eVxDFcg_7Q3sXkbT';
 
-    // Инициализация клиента Supabase под уникальным именем
-    const client = supabase.createClient(DB_URL, DB_KEY);
+    // Создаем клиента
+    const _lib = window.supabase;
+    const client = _lib.createClient(DB_URL, DB_KEY);
 
     const feedElement = document.getElementById('postFeed');
     const statusElement = document.getElementById('status');
     const inputElement = document.getElementById('postInput');
     const buttonElement = document.getElementById('submitBtn');
 
-    // Функция для получения всех постов
+    // Функция загрузки постов
     async function fetchPosts() {
-        const { data, error } = await client
-            .from('posts')
-            .select('*')
-            .order('created_at', { ascending: false });
+        try {
+            const { data, error } = await client
+                .from('posts')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-        if (error) {
-            statusElement.innerText = "Ошибка загрузки: " + error.message;
-            console.error(error);
-        } else {
-            statusElement.innerText = "";
+            if (error) throw error;
+
+            statusElement.innerText = data.length === 0 ? "Сообщений пока нет. Будь первым!" : "";
             renderPosts(data);
+        } catch (err) {
+            statusElement.innerText = "Ошибка: проверь таблицу 'posts' в Supabase";
+            console.error("Full error:", err);
         }
     }
 
-    // Функция для отрисовки постов на странице
+    // Отрисовка
     function renderPosts(posts) {
         feedElement.innerHTML = '';
         posts.forEach(post => {
-            const date = new Date(post.created_at).toLocaleString();
+            const date = new Date(post.created_at).toLocaleString('ru-RU');
             const postDiv = document.createElement('div');
             postDiv.className = 'post';
             postDiv.innerHTML = `
@@ -89,7 +90,7 @@
         });
     }
 
-    // Функция для отправки нового поста
+    // Отправка
     async function sendPost() {
         const content = inputElement.value.trim();
         if (!content) return;
@@ -97,33 +98,33 @@
         buttonElement.disabled = true;
         buttonElement.innerText = "Отправка...";
 
-        const { error } = await client
-            .from('posts')
-            .insert([{ text: content }]);
+        try {
+            const { error } = await client
+                .from('posts')
+                .insert([{ text: content }]);
 
-        if (error) {
-            alert("Ошибка отправки: " + error.message);
-        } else {
+            if (error) throw error;
+
             inputElement.value = "";
             await fetchPosts();
+        } catch (err) {
+            alert("Ошибка! Убедись, что RLS в Supabase отключен. Текст ошибки: " + err.message);
+        } finally {
+            buttonElement.disabled = false;
+            buttonElement.innerText = "Опубликовать";
         }
-
-        buttonElement.disabled = false;
-        buttonElement.innerText = "Отправить сообщение";
     }
 
-    // Защита от вредоносного кода (XSS)
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
 
-    // Вешаем событие на кнопку
     buttonElement.addEventListener('click', sendPost);
 
-    // Загружаем посты при открытии сайта
-    fetchPosts();
+    // Запуск при загрузке
+    window.onload = fetchPosts;
 </script>
 
 </body>
