@@ -1,73 +1,79 @@
+https://twwlnqvwjkqcxegeoote.supabase.co
+
+sb_publishable_AcN89vQAY3mzDf9eVxDFcg_7Q3sXkbT
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Анонимная Стена</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
-        .container { width: 100%; max-width: 600px; }
-        .post-form { background: #2a2a2a; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        textarea { width: 100%; height: 100px; background: #333; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px; resize: none; box-sizing: border-box; }
-        input[type="file"] { margin-top: 10px; color: #aaa; }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-top: 10px; font-weight: bold; width: 100%; }
-        button:hover { background: #0056b3; }
-        .feed { display: flex; flex-direction: column; gap: 20px; }
-        .post { background: #2a2a2a; padding: 15px; border-radius: 12px; border-left: 5px solid #007bff; }
-        .post img { max-width: 100%; border-radius: 8px; margin-top: 10px; display: block; }
-        .post-time { font-size: 0.8rem; color: #777; margin-bottom: 8px; }
+        body { font-family: sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { width: 100%; max-width: 500px; }
+        .form { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        textarea { width: 100%; height: 80px; background: #2b2b2b; color: white; border: 1px solid #444; border-radius: 5px; padding: 10px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; margin-top: 10px; background: #3d5afe; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .post { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #3d5afe; }
+        .post img { max-width: 100%; margin-top: 10px; border-radius: 5px; }
+        .time { font-size: 0.7rem; color: #777; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>👤 Анонимная Стена</h1>
-    
-    <div class="post-form">
-        <textarea id="postInput" placeholder="Что у тебя на уме? (Анонимно)"></textarea>
-        <input type="file" id="imageInput" accept="image/*">
-        <button onclick="addPost()">Опубликовать</button>
+    <div class="form">
+        <textarea id="msg" placeholder="Твое анонимное сообщение..."></textarea>
+        <button onclick="sendPost()">Отправить в вечность</button>
     </div>
-
-    <div class="feed" id="postFeed">
-        </div>
+    <div id="feed">Загрузка постов...</div>
 </div>
 
 <script>
-    function addPost() {
-        const text = document.getElementById('postInput').value;
-        const imageFile = document.getElementById('imageInput').files[0];
-        const feed = document.getElementById('postFeed');
+    // ВСТАВЬ СВОИ ДАННЫЕ ТУТ:
+    const SUPABASE_URL = 'ТВОЙ_PROJECT_URL';
+    const SUPABASE_KEY = 'ТВОЙ_ANON_KEY';
+    
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        if (text.trim() === "" && !imageFile) {
-            alert("Напиши что-нибудь!");
-            return;
-        }
+    // Загрузка постов из базы
+    async function loadPosts() {
+        const { data, error } = await supabase
+            .from('posts')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-        const postDiv = document.createElement('div');
-        postDiv.className = 'post';
+        if (error) return console.error(error);
         
-        const time = new Date().toLocaleString();
-        let imageHtml = "";
-
-        if (imageFile) {
-            const imageUrl = URL.createObjectURL(imageFile);
-            imageHtml = `<img src="${imageUrl}">`;
-        }
-
-        postDiv.innerHTML = `
-            <div class="post-time">${time} • Аноним</div>
-            <div class="post-text">${text}</div>
-            ${imageHtml}
-        `;
-
-        feed.prepend(postDiv);
-
-        // Очистка полей
-        document.getElementById('postInput').value = "";
-        document.getElementById('imageInput').value = "";
+        const feed = document.getElementById('feed');
+        feed.innerHTML = '';
+        data.forEach(post => {
+            const div = document.createElement('div');
+            div.className = 'post';
+            div.innerHTML = `<div class="time">${new Date(post.created_at).toLocaleString()}</div><div>${post.text}</div>`;
+            feed.appendChild(div);
+        });
     }
-</script>
 
+    // Отправка поста
+    async function sendPost() {
+        const text = document.getElementById('msg').value;
+        if (!text) return;
+
+        const { error } = await supabase
+            .from('posts')
+            .insert([{ text: text }]);
+
+        if (error) alert("Ошибка!");
+        else {
+            document.getElementById('msg').value = '';
+            loadPosts();
+        }
+    }
+
+    loadPosts();
+</script>
 </body>
 </html>
