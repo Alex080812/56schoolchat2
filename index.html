@@ -4,11 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Анонимная Стена</title>
-    <script>
-        const SUPABASE_URL = 'https://twwlnqvwjkqcxegeoote.supabase.co
-'; // Замени это
-    const SUPABASE_KEY = 'sb_publishable_AcN89vQAY3mzDf9eVxDFcg_7Q3sXkbT';   // И это
-    </script>
+  <script>
+    // ВСТАВЬ СВОИ ДАННЫЕ ТУТ:
+    const S_URL = 'https://twwlnqvwjkqcxegeoote.supabase.co'; 
+    const S_KEY = 'sb_publishable_AcN89vQAY3mzDf9eVxDFcg_7Q3sXkbT
+
+';
+    
+    // Мы называем переменную _supabase, чтобы не было конфликта с библиотекой
+    const _supabase = supabase.createClient(https://twwlnqvwjkqcxegeoote.supabase.coL,
+sb_publishable_AcN89vQAY3mzDf9eVxDFcg_7Q3sXkbT
+);
+
+    async function loadPosts() {
+        const { data, error } = await _supabase
+            .from('posts')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Ошибка загрузки:", error);
+            return;
+        }
+        
+        const feed = document.getElementById('feed');
+        feed.innerHTML = '';
+        data.forEach(post => {
+            const div = document.createElement('div');
+            div.className = 'post';
+            div.innerHTML = `<div class="time">${new Date(post.created_at).toLocaleString()}</div><div>${post.text}</div>`;
+            feed.appendChild(div);
+        });
+    }
+
+    async function sendPost() {
+        const text = document.getElementById('msg').value;
+        if (!text) return;
+
+        const { error } = await _supabase
+            .from('posts')
+            .insert([{ text: text }]);
+
+        if (error) {
+            alert("Ошибка при отправке: " + error.message);
+        } else {
+            document.getElementById('msg').value = '';
+            loadPosts();
+        }
+    }
+
+    // Запускаем загрузку при старте страницы
+    loadPosts();
+</script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { width: 100%; max-width: 500px; }
