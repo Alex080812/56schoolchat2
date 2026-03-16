@@ -4,93 +4,126 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Чат 56 школы</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { width: 100%; max-width: 450px; }
-        .form-box { background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        textarea { width: 100%; height: 70px; background: #2b2b2b; color: white; border: 1px solid #444; border-radius: 8px; padding: 10px; resize: none; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; margin-top: 10px; background: #3d5afe; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        .container { width: 100%; max-width: 500px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: #3d5afe; }
+        
+        .post-form { background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 30px; }
+        textarea { width: 100%; height: 100px; background: #2b2b2b; border: 1px solid #444; color: white; padding: 12px; border-radius: 10px; resize: none; box-sizing: border-box; font-size: 16px; }
+        button { background: #3d5afe; color: white; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; margin-top: 10px; font-weight: bold; width: 100%; font-size: 16px; transition: 0.3s; }
         button:hover { background: #2a3eb1; }
-        .post { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #3d5afe; animation: fadeIn 0.5s ease; }
-        .time { font-size: 0.7rem; color: #777; margin-bottom: 5px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .feed { display: flex; flex-direction: column; gap: 15px; }
+        .post { background: #1e1e1e; padding: 15px; border-radius: 12px; border-left: 5px solid #3d5afe; position: relative; }
+        .post-time { font-size: 0.75rem; color: #777; margin-bottom: 8px; }
+        .post-text { line-height: 1.5; word-wrap: break-word; }
+        
+        #status { font-size: 0.9rem; text-align: center; margin-bottom: 10px; color: #3d5afe; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🏫 Чат 56 школы</h1>
-    <div class="form-box">
-        <textarea id="msg" placeholder="Напиши анонимно..."></textarea>
-        <button id="sendBtn">Отправить</button>
+    <div class="header">
+        <h1>🏫 Чат 56 школы</h1>
+        <p>Анонимные сообщения</p>
     </div>
-    <div id="feed">Загрузка сообщений...</div>
+
+    <div class="post-form">
+        <textarea id="postInput" placeholder="Что ты хочешь сказать анонимно?"></textarea>
+        <button id="submitBtn">Отправить сообщение</button>
+    </div>
+
+    <div id="status">Загрузка сообщений...</div>
+    <div class="feed" id="postFeed"></div>
 </div>
 
 <script>
-    // --- НАСТРОЙКИ SUPABASE ---
-    // Замени данные в кавычках на свои из раздела Project Settings -> API
+    // --- НАСТРОЙКИ (ВСТАВЬ СВОИ ДАННЫЕ ТУТ) ---
     const DB_URL = 'https://twwlnqvwjkqcxegeoote.supabase.co
 
 '; 
-    const DB_KEY = '
-sb_publishable_AcN89vQAY3mzDf9eVxDFcg_7Q3sXkbT
-';
+    const DB_KEY = 'sb_publishable_AcN89vQAY3mzDf9eVxDFcg_7Q3sXkbT';
 
-    // Создаем клиента под именем 'myApp' (чтобы не путать с библиотекой 'supabase')
-    const myApp = supabase.createClient(DB_URL, DB_KEY);
+    // Инициализация клиента Supabase под уникальным именем
+    const client = supabase.createClient(DB_URL, DB_KEY);
 
-    // Функция загрузки
-    async function getPosts() {
-        const { data, error } = await myApp
+    const feedElement = document.getElementById('postFeed');
+    const statusElement = document.getElementById('status');
+    const inputElement = document.getElementById('postInput');
+    const buttonElement = document.getElementById('submitBtn');
+
+    // Функция для получения всех постов
+    async function fetchPosts() {
+        const { data, error } = await client
             .from('posts')
             .select('*')
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error("Ошибка базы:", error.message);
-            document.getElementById('feed').innerText = "Ошибка доступа к базе данных.";
-            return;
+            statusElement.innerText = "Ошибка загрузки: " + error.message;
+            console.error(error);
+        } else {
+            statusElement.innerText = "";
+            renderPosts(data);
         }
-        
-        const feed = document.getElementById('feed');
-        feed.innerHTML = '';
-        
-        data.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'post';
-            const date = new Date(item.created_at).toLocaleString();
-            div.innerHTML = `<div class="time">${date}</div><div>${item.text}</div>`;
-            feed.appendChild(div);
+    }
+
+    // Функция для отрисовки постов на странице
+    function renderPosts(posts) {
+        feedElement.innerHTML = '';
+        posts.forEach(post => {
+            const date = new Date(post.created_at).toLocaleString();
+            const postDiv = document.createElement('div');
+            postDiv.className = 'post';
+            postDiv.innerHTML = `
+                <div class="post-time">${date} • Аноним</div>
+                <div class="post-text">${escapeHtml(post.text)}</div>
+            `;
+            feedElement.appendChild(postDiv);
         });
     }
 
-    // Функция отправки
+    // Функция для отправки нового поста
     async function sendPost() {
-        const input = document.getElementById('msg');
-        const text = input.value.trim();
-        
-        if (!text) return;
+        const content = inputElement.value.trim();
+        if (!content) return;
 
-        const { error } = await myApp
+        buttonElement.disabled = true;
+        buttonElement.innerText = "Отправка...";
+
+        const { error } = await client
             .from('posts')
-            .insert([{ text: text }]);
+            .insert([{ text: content }]);
 
         if (error) {
-            alert("Не удалось отправить: " + error.message);
+            alert("Ошибка отправки: " + error.message);
         } else {
-            input.value = '';
-            getPosts(); // Обновляем ленту
+            inputElement.value = "";
+            await fetchPosts();
         }
+
+        buttonElement.disabled = false;
+        buttonElement.innerText = "Отправить сообщение";
     }
 
-    // Слушатель клика на кнопку (вместо onclick в HTML)
-    document.getElementById('sendBtn').addEventListener('click', sendPost);
+    // Защита от вредоносного кода (XSS)
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 
-    // Загружаем посты сразу при открытии
-    getPosts();
+    // Вешаем событие на кнопку
+    buttonElement.addEventListener('click', sendPost);
+
+    // Загружаем посты при открытии сайта
+    fetchPosts();
 </script>
 
 </body>
