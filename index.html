@@ -1,120 +1,98 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta name="google-site-verification" content="H6kg_ZnG1K_xXiMxXb_zRP8Ty67wZYpKXGmiCDdHeA4" />
     <meta charset="UTF-8">
-    <meta name="description" content="Анонимный чат для учеников. Пиши свои мысли анонимно.">
-<meta name="keywords" content="анонимный чат, чат, признавашки">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Аноним Чат</title>
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #121212; color: #ffffff; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         .container { width: 100%; max-width: 500px; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { color: #3d5afe; margin-bottom: 5px; }
-        
-        .post-form { background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 25px; }
-        textarea { width: 100%; height: 100px; background: #2b2b2b; border: 1px solid #444; color: white; padding: 12px; border-radius: 10px; resize: none; box-sizing: border-box; font-size: 16px; outline: none; }
-        button { background: #3d5afe; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; margin-top: 10px; font-weight: bold; width: 100%; font-size: 16px; transition: 0.3s; }
+        .post-form, .post { background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid #3d5afe; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        textarea, input { width: 100%; background: #2b2b2b; color: white; border: 1px solid #444; border-radius: 8px; padding: 10px; box-sizing: border-box; outline: none; }
+        button { background: #3d5afe; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; }
         button:hover { background: #2a3eb1; }
         
-        .feed { display: flex; flex-direction: column; gap: 15px; width: 100%; }
-        .post { background: #1e1e1e; padding: 15px; border-radius: 12px; border-left: 5px solid #3d5afe; position: relative; }
-        .post-time { font-size: 0.75rem; color: #777; margin-bottom: 8px; }
-        .post-text { line-height: 1.5; word-wrap: break-word; font-size: 1.1rem; }
-        
-        #status { font-size: 0.9rem; text-align: center; margin-bottom: 10px; color: #3d5afe; min-height: 20px; }
+        .comments-section { margin-top: 15px; padding-top: 10px; border-top: 1px solid #333; }
+        .comment { background: #252525; margin-top: 8px; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; border-left: 2px solid #777; color: #ccc; }
+        .comment-input-group { display: flex; gap: 5px; margin-top: 10px; }
+        .comment-input-group input { font-size: 0.85rem; padding: 6px; }
+        .comment-input-group button { width: auto; margin: 0; padding: 6px 15px; font-size: 0.8rem; }
+        .post-text { font-size: 1.1rem; margin-bottom: 10px; }
+        .time { font-size: 0.7rem; color: #666; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <h1>Аноним Чат</h1>
-        <p>Анонимная стена объявлений</p>
-    </div>
-
+    <h1 style="text-align: center; color: #3d5afe;">Аноним Чат</h1>
     <div class="post-form">
         <textarea id="postInput" placeholder="Напиши что-нибудь анонимно..."></textarea>
-        <button id="submitBtn">Опубликовать</button>
+        <button onclick="sendPost()">Опубликовать</button>
     </div>
-
-    <div id="status">Загрузка сообщений...</div>
-    <div class="feed" id="postFeed"></div>
+    <div id="feed">Загрузка...</div>
 </div>
 
 <script>
-    // ТВОИ ДАННЫЕ УЖЕ ВСТАВЛЕНЫ
     const DB_URL = 'https://twwlnqvwjkqcxegeoote.supabase.co'; 
     const DB_KEY = 'sb_publishable_AcN89vQAY3mzDf9eVxDFcg_7Q3sXkbT';
+    const client = supabase.createClient(DB_URL, DB_KEY);
 
-    // Создаем клиента
-    const _lib = window.supabase;
-    const client = _lib.createClient(DB_URL, DB_KEY);
+    // Загрузка всего: и постов, и комментов
+    async function loadAll() {
+        // Берем посты
+        const { data: posts, error: pErr } = await client.from('posts').select('*').order('created_at', { ascending: false });
+        // Берем все комменты
+        const { data: comments, error: cErr } = await client.from('comments').select('*').order('created_at', { ascending: true });
 
-    const feedElement = document.getElementById('postFeed');
-    const statusElement = document.getElementById('status');
-    const inputElement = document.getElementById('postInput');
-    const buttonElement = document.getElementById('submitBtn');
+        if (pErr) { console.error(pErr); return; }
 
-    // Функция загрузки постов
-    async function fetchPosts() {
-        try {
-            const { data, error } = await client
-                .from('posts')
-                .select('*')
-                .order('created_at', { ascending: false });
+        const feed = document.getElementById('feed');
+        feed.innerHTML = '';
 
-            if (error) throw error;
-
-            statusElement.innerText = data.length === 0 ? "Сообщений пока нет. Будь первым!" : "";
-            renderPosts(data);
-        } catch (err) {
-            statusElement.innerText = "Ошибка: проверь таблицу 'posts' в Supabase";
-            console.error("Full error:", err);
-        }
-    }
-
-    // Отрисовка
-    function renderPosts(posts) {
-        feedElement.innerHTML = '';
         posts.forEach(post => {
-            const date = new Date(post.created_at).toLocaleString('ru-RU');
-            const postDiv = document.createElement('div');
-            postDiv.className = 'post';
-            postDiv.innerHTML = `
-                <div class="post-time">${date} • Аноним</div>
+            // Фильтруем комменты именно для этого поста
+            const postComments = comments ? comments.filter(c => c.post_id == post.id) : [];
+            
+            const div = document.createElement('div');
+            div.className = 'post';
+            div.innerHTML = `
+                <div class="time">${new Date(post.created_at).toLocaleString()}</div>
                 <div class="post-text">${escapeHtml(post.text)}</div>
+                
+                <div class="comments-section" id="comments-${post.id}">
+                    ${postComments.map(c => `<div class="comment">${escapeHtml(c.text)}</div>`).join('')}
+                </div>
+
+                <div class="comment-input-group">
+                    <input type="text" id="input-${post.id}" placeholder="Ответить анонимно...">
+                    <button onclick="sendComment(${post.id})">OK</button>
+                </div>
             `;
-            feedElement.appendChild(postDiv);
+            feed.appendChild(div);
         });
     }
 
-    // Отправка
     async function sendPost() {
-        const content = inputElement.value.trim();
-        if (!content) return;
+        const text = document.getElementById('postInput').value.trim();
+        if (!text) return;
+        await client.from('posts').insert([{ text }]);
+        document.getElementById('postInput').value = '';
+        loadAll();
+    }
 
-        buttonElement.disabled = true;
-        buttonElement.innerText = "Отправка...";
+    async function sendComment(postId) {
+        const input = document.getElementById('input-' + postId);
+        const text = input.value.trim();
+        if (!text) return;
 
-        try {
-            const { error } = await client
-                .from('posts')
-                .insert([{ text: content }]);
-
-            if (error) throw error;
-
-            inputElement.value = "";
-            await fetchPosts();
-        } catch (err) {
-            alert("Ошибка! Убедись, что RLS в Supabase отключен. Текст ошибки: " + err.message);
-        } finally {
-            buttonElement.disabled = false;
-            buttonElement.innerText = "Опубликовать";
+        const { error } = await client.from('comments').insert([{ post_id: postId, text: text }]);
+        if (error) {
+            alert("Ошибка! Проверь таблицу 'comments' в Supabase");
+            console.error(error);
+        } else {
+            input.value = '';
+            loadAll(); // Перезагружаем всё, чтобы увидеть коммент
         }
     }
 
@@ -124,10 +102,9 @@
         return div.innerHTML;
     }
 
-    buttonElement.addEventListener('click', sendPost);
-
-    // Запуск при загрузке
-    window.onload = fetchPosts;
+    loadAll();
+    // Обновляем раз в 10 секунд для новых сообщений
+    setInterval(loadAll, 10000);
 </script>
 
 </body>
