@@ -6,30 +6,30 @@
     <title>Аноним Чат</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        body { font-family: sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { width: 100%; max-width: 500px; }
-        .post-form, .post { background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid #3d5afe; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        textarea, input { width: 100%; background: #2b2b2b; color: white; border: 1px solid #444; border-radius: 8px; padding: 10px; box-sizing: border-box; outline: none; }
+        .post { background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid #3d5afe; }
+        textarea { width: 100%; height: 80px; background: #2b2b2b; color: white; border: 1px solid #444; border-radius: 8px; padding: 10px; box-sizing: border-box; }
         button { background: #3d5afe; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; }
-        button:hover { background: #2a3eb1; }
         
-        .comments-section { margin-top: 15px; padding-top: 10px; border-top: 1px solid #333; }
-        .comment { background: #252525; margin-top: 8px; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; border-left: 2px solid #777; color: #ccc; }
-        .comment-input-group { display: flex; gap: 5px; margin-top: 10px; }
-        .comment-input-group input { font-size: 0.85rem; padding: 6px; }
-        .comment-input-group button { width: auto; margin: 0; padding: 6px 15px; font-size: 0.8rem; }
-        .post-text { font-size: 1.1rem; margin-bottom: 10px; }
-        .time { font-size: 0.7rem; color: #666; margin-bottom: 5px; }
+        /* Стили для комментов */
+        .comment-box { background: #252525; padding: 8px; margin-top: 5px; border-radius: 5px; font-size: 0.85rem; color: #bbb; border-left: 2px solid #555; }
+        .reply-area { display: flex; gap: 5px; margin-top: 10px; }
+        .reply-area input { flex: 1; background: #333; border: 1px solid #444; color: white; padding: 8px; border-radius: 5px; }
+        .reply-area button { width: auto; margin: 0; padding: 5px 15px; background: #555; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1 style="text-align: center; color: #3d5afe;">Аноним Чат</h1>
-    <div class="post-form">
-        <textarea id="postInput" placeholder="Напиши что-нибудь анонимно..."></textarea>
-        <button onclick="sendPost()">Опубликовать</button>
+    <h1 style="text-align: center;">Аноним Чат</h1>
+    
+    <!-- Форма создания поста -->
+    <div style="background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+        <textarea id="postInput" placeholder="Напиши что-нибудь..."></textarea>
+        <button onclick="sendPost()">Опубликовать пост</button>
     </div>
+
     <div id="feed">Загрузка...</div>
 </div>
 
@@ -38,35 +38,35 @@
     const DB_KEY = 'sb_publishable_AcN89vQAY3mzDf9eVxDFcg_7Q3sXkbT';
     const client = supabase.createClient(DB_URL, DB_KEY);
 
-    // Загрузка всего: и постов, и комментов
     async function loadAll() {
-        // Берем посты
+        // Загружаем посты
         const { data: posts, error: pErr } = await client.from('posts').select('*').order('created_at', { ascending: false });
-        // Берем все комменты
-        const { data: comments, error: cErr } = await client.from('comments').select('*').order('created_at', { ascending: true });
+        // Загружаем комменты (если таблицы нет, будет ошибка, но код не умрет)
+        const { data: comments, error: cErr } = await client.from('comments').select('*');
 
-        if (pErr) { console.error(pErr); return; }
+        if (pErr) { document.getElementById('feed').innerHTML = "Ошибка базы!"; return; }
 
         const feed = document.getElementById('feed');
         feed.innerHTML = '';
 
         posts.forEach(post => {
-            // Фильтруем комменты именно для этого поста
             const postComments = comments ? comments.filter(c => c.post_id == post.id) : [];
             
             const div = document.createElement('div');
             div.className = 'post';
             div.innerHTML = `
-                <div class="time">${new Date(post.created_at).toLocaleString()}</div>
-                <div class="post-text">${escapeHtml(post.text)}</div>
+                <div style="font-size: 0.8rem; color: #666;">${new Date(post.created_at).toLocaleString()}</div>
+                <div style="margin: 10px 0;">${post.text}</div>
                 
-                <div class="comments-section" id="comments-${post.id}">
-                    ${postComments.map(c => `<div class="comment">${escapeHtml(c.text)}</div>`).join('')}
+                <!-- Список комментов -->
+                <div id="list-${post.id}">
+                    ${postComments.map(c => `<div class="comment-box">${c.text}</div>`).join('')}
                 </div>
 
-                <div class="comment-input-group">
-                    <input type="text" id="input-${post.id}" placeholder="Ответить анонимно...">
-                    <button onclick="sendComment(${post.id})">OK</button>
+                <!-- ФОРМА ОТВЕТА (КНОПКА ТУТ) -->
+                <div class="reply-area">
+                    <input type="text" id="input-${post.id}" placeholder="Ответить...">
+                    <button onclick="sendComment(${post.id})">ОК</button>
                 </div>
             `;
             feed.appendChild(div);
@@ -87,24 +87,17 @@
         if (!text) return;
 
         const { error } = await client.from('comments').insert([{ post_id: postId, text: text }]);
+        
         if (error) {
-            alert("Ошибка! Проверь таблицу 'comments' в Supabase");
-            console.error(error);
+            alert("Ошибка! Ты создал таблицу 'comments' в Supabase? Код ошибки: " + error.message);
         } else {
             input.value = '';
-            loadAll(); // Перезагружаем всё, чтобы увидеть коммент
+            loadAll();
         }
     }
 
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
     loadAll();
-    // Обновляем раз в 10 секунд для новых сообщений
-    setInterval(loadAll, 10000);
+    setInterval(loadAll, 10000); // Обновлять каждые 10 сек
 </script>
 
 </body>
